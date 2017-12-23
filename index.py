@@ -1,32 +1,70 @@
 import csv
 import pprint
+import pandas as pd
 from itertools import groupby
+
 pp = pprint.PrettyPrinter(indent=2)
 
-'''
-Need to rewrite so each function is building up the data set further
-'''
+# Match and filter national zip code data with our target zips
+def merge_zips(): 
+	target_zips = pd.read_csv("slcsp.csv")
+	all_zips = pd.read_csv("zips.csv")
+	target_zips = target_zips.dropna(axis=1)
+	merged_zips = target_zips.merge(all_zips, on="zipcode")
+	return merged_zips
 
-def get_target_zips():
-	with open("slcsp.csv", newline="") as slcsp:
-		reader = csv.DictReader(slcsp)
-		zips = [zip["zipcode"] for zip in reader]
-		return zips
+# Return silver plans for our zips
+def merge_plans(): 
+	zips = merge_zips()
+	all_plans = pd.read_csv("plans.csv")
+	all_plans = all_plans.loc[all_plans["metal_level"] == "Silver"]
+	all_silver_plans = zips.merge(all_plans, on=["state", "rate_area"])
+	return all_silver_plans
 
-def get_state_data(): 
-	target_zips = get_target_zips()
-	with open ("zips.csv", newline="") as all_zips:
-		reader = csv.DictReader(all_zips)
-		state_data = [(zip["state"], zip["rate_area"]) for zip in reader if zip["zipcode"] in target_zips]
-		return state_data
+# Remove duplicate silver plans in same regions
+def dedupe_plans(): 
+	all_silver_plans = merge_plans()
+	unique_silver_plans = all_silver_plans.drop_duplicates(subset=["zipcode", "state", "rate_area", "rate"])
+	# unique_sorted_silver_plans = unique_silver_plans.sort_values(by=["state", "rate_area", "rate"])
+	return unique_silver_plans
+
+def filter_plans(): 
+	plans = dedupe_plans()
+	grouped_plans = plans.groupby("zipcode").filter(
+			lambda x: len(x["zipcode"].unique()) < 2
+		)
+	return grouped_plans
+
+	# for key, group in grouped_plans:
+	# 	print(group["rate_area"].unique(), group["zipcode"].unique())
+
+	# for item, group in grouped_plans:
+	# 	print((group["zipcode"], group["rate_area"]))
 		
-def get_all_plans():
-	state_data = get_state_data()
-	# return state_data
-	with open ("plans.csv", newline="") as all_plans:
-		reader = csv.DictReader(all_plans)
-		for entry in state_data:
-			print(entry)
+
+
+if __name__ == '__main__':
+	print(filter_plans())
+# def get_target_zips():
+# 	with open("slcsp.csv", newline="") as slcsp:
+# 		reader = csv.DictReader(slcsp)
+# 		zips = [zip["zipcode"] for zip in reader]
+# 		return zips
+
+# def get_state_data(): 
+# 	target_zips = get_target_zips()
+# 	with open ("zips.csv", newline="") as all_zips:
+# 		reader = csv.DictReader(all_zips)
+# 		state_data = [(zip["zipcode"], zip["state"], zip["rate_area"]) for zip in reader if zip["zipcode"] in target_zips]
+# 		return state_data
+		
+# def get_all_plans():
+# 	state_data = get_state_data()
+# 	# return state_data
+# 	with open ("plans.csv", newline="") as all_plans:
+# 		reader = csv.DictReader(all_plans)
+# 		for entry in state_data:
+# 			return
 
 		# plan_data = [
 		# 							(plan["state"], plan["rate_area"], plan["rate"], plan["metal_level"]) 
@@ -40,16 +78,13 @@ def get_all_plans():
 
 		# return plan_data
 
-def sort_plans():
-	unique_plans = get_all_plans()
-	correct_plans = []
-	for key, group in groupby(unique_plans, lambda x: (x[0], x[1])):
-		print(key)
-		group = list(group)
-		pp.pprint(group)
-		print(group[1])
+# def sort_plans():
+# 	unique_plans = get_all_plans()
+# 	correct_plans = []
+# 	for key, group in groupby(unique_plans, lambda x: (x[0], x[1])):
+# 		print(key)
+# 		group = list(group)
+# 		pp.pprint(group)
+# 		print(group[1])
 		
 
-
-if __name__ == '__main__':
-	pp.pprint(get_all_plans())
