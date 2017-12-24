@@ -1,4 +1,3 @@
-import csv
 import pandas as pd
 
 # Match and filter national zip code data with our target zips
@@ -30,7 +29,8 @@ def filter_plans():
 		zipped_group = zip(group["zipcode"], group["rate_area"])
 		unique_zipped_group = list(set(zipped_group))
 		if len(unique_zipped_group) > 1: 
-			group["rate"] = ""
+			for item in unique_zipped_group:
+				group["rate"] = ""
 		return group
 	# Sort plans in each group by rate
 	def sort_rates_ascending(group):
@@ -49,7 +49,7 @@ def match_final_plans():
 	target_zips = pd.read_csv("slcsp.csv")
 	target_zips = target_zips.dropna(axis=1)
 	merged_plans = target_zips.merge(final_plans, how="left", on="zipcode")
-	print(merged_plans)
+	print(merged_plans.loc[: , ["zipcode", "rate"]])
 
 if __name__ == '__main__':
 	match_final_plans()
