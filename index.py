@@ -21,7 +21,7 @@ def merge_plans():
 	all_silver_plans = zips.merge(all_plans, on=["state", "rate_area"])
 	return all_silver_plans
 
-# Remove duplicate silver plans in same regions
+# Remove duplicate silver plans with the same rate in the same region
 def dedupe_plans(): 
 	all_silver_plans = merge_plans()
 	unique_silver_plans = all_silver_plans.drop_duplicates(subset=["zipcode", "state", "rate_area", "rate"])
@@ -29,11 +29,26 @@ def dedupe_plans():
 	return unique_silver_plans
 
 def filter_plans(): 
+	# Parses zips with multiple rate areas
+	def filter_ambiguous_zips(group):
+		zipped_group = zip(group["zipcode"], group["rate_area"])
+		unique_zipped_group = list(set(zipped_group))
+		if len(unique_zipped_group) < 2: 
+			return True
+		else:
+			return False
+
+
 	plans = dedupe_plans()
-	grouped_plans = plans.groupby("zipcode").filter(
-			lambda x: len(x["zipcode"].unique()) < 2
+	grouped_plans = plans.groupby(["zipcode"]).filter(
+			lambda x: filter_ambiguous_zips(x)
 		)
-	return grouped_plans
+	# grouped_plans.to_csv("plan_test2.csv")
+	print(grouped_plans)
+	
+
+			
+		
 
 	# for key, group in grouped_plans:
 	# 	print(group["rate_area"].unique(), group["zipcode"].unique())
@@ -44,7 +59,7 @@ def filter_plans():
 
 
 if __name__ == '__main__':
-	print(filter_plans())
+	filter_plans()
 # def get_target_zips():
 # 	with open("slcsp.csv", newline="") as slcsp:
 # 		reader = csv.DictReader(slcsp)
