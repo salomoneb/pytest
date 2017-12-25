@@ -54,7 +54,7 @@ def match_final_plans():
 
 def write_to_csv():
 	final_output = match_final_plans()
-	final_output.to_csv("slcsp.csv")
+	final_output.to_csv("slcsp.csv", index=False)
 
 
 if __name__ == '__main__':
