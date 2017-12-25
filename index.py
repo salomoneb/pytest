@@ -54,14 +54,14 @@ def clean_plans():
 
 def match_final_plans(): 
 	final_plans = clean_plans()
-	merged_plans = (
+	final_merged_plans = (
 		pd.read_csv("slcsp.csv")
 			.dropna(axis=1)
 			.merge(final_plans, how="left", on="zipcode")
 			.loc[ : , ["zipcode", "rate"]]
 			.fillna(value="", axis=1)
 		)
-	return merged_plans
+	return final_merged_plans
 
 def write_to_csv(output_file):
 	final_output = match_final_plans()
