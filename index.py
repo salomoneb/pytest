@@ -2,8 +2,8 @@ import pandas as pd
 
 # Get full zip code data for our target zips
 def merge_zips(targets_file, zips_file):
-    target_zips = pd.read_csv(targets)
-    all_zips = pd.read_csv(zips)
+    target_zips = pd.read_csv(targets_file)
+    all_zips = pd.read_csv(zips_file)
     merged_zips = target_zips.dropna(axis=1).merge(all_zips, on="zipcode")
     return merged_zips
 
@@ -47,7 +47,7 @@ def clean_plans(unique_silver_plans):
         .groupby("zipcode", as_index=False)
         .apply(sort_rates_ascending)
         .groupby("zipcode")
-        .nth(1)  # Retrieves the second item in the sorted group
+        .nth(1)  # Retrieves the second item (second-lowest) in the sorted group
         .reset_index()
     )
     return final_plans
