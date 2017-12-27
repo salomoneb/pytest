@@ -1,26 +1,25 @@
 import pandas as pd
 
 # Get full zip code data for our target zips
-def merge_zips(targets, zips):
+def merge_zips(targets_file, zips_file):
     target_zips = pd.read_csv(targets)
     all_zips = pd.read_csv(zips)
     merged_zips = target_zips.dropna(axis=1).merge(all_zips, on="zipcode")
     return merged_zips
 
 # Merges plan data with zip data and returns all silver plans for our zips
-def merge_plans(targets, zips, plans):
-    zips = merge_zips(targets, zips)
+def merge_plans(merged_zips):
+    merged_zips = merge_zips(targets, zips)
     all_plans = pd.read_csv(plans)
     all_plans = all_plans.loc[all_plans["metal_level"] == "Silver"]
-    all_silver_plans = zips.merge(all_plans, on=["state", "rate_area"])
+    all_silver_plans = merged_zips.merge(all_plans, on=["state", "rate_area"])
     return all_silver_plans
 
 # Remove duplicate silver plans with the same rate in the same region
-def dedupe_plans(targets, zips, plans):
-    all_silver_plans = merge_plans(targets, zips, plans)
+def dedupe_plans(all_silver_plans):
+    all_silver_plans = merge_plans(merge_zips)
     unique_silver_plans = all_silver_plans.drop_duplicates(
-        subset=["zipcode", "state", "rate_area", "rate"]
-    )
+        subset=["zipcode", "state", "rate_area", "rate"])
     return unique_silver_plans
 
 # Empty rate values for zips with multiple rate areas
@@ -38,12 +37,12 @@ def sort_rates_ascending(group):
 Sorts and cleans our silver plans, returning data that we can merge
 with our original slcsp.csv sheet
 '''
-def clean_plans(targets, zips, plans):
-    plans = dedupe_plans(targets, zips, plans)
+def clean_plans(unique_silver_plans):
+    unique_silver_plans = dedupe_plans(merge_plans)
 
     # Final mergeable data
     final_plans = (
-        plans.groupby("zipcode")
+        unique_silver_plans.groupby("zipcode")
         .filter(identify_ambiguous_zips)
         .groupby("zipcode", as_index=False)
         .apply(sort_rates_ascending)
@@ -54,10 +53,10 @@ def clean_plans(targets, zips, plans):
     return final_plans
 
 # Match plan rates with original zip sheet
-def match_final_plans(targets, zips, plans):
-    final_plans = clean_plans(targets, zips, plans)
+def match_final_plans(final_plans):
+    final_plans = clean_plans(dedupe_plans)
     final_merged_plans = (
-        pd.read_csv(targets)
+        pd.read_csv("slcsp.csv")
         .dropna(axis=1)
         .merge(final_plans, how="left", on="zipcode")
         .loc[:, ["zipcode", "rate"]]
@@ -65,13 +64,13 @@ def match_final_plans(targets, zips, plans):
     )
     return final_merged_plans
 
-
-def write_to_csv(targets, zips, plans):
-    final_output = match_final_plans(targets, zips, plans)
-    final_output.to_csv(targets, index=False)
+# Modify the original slcsp file
+def write_to_csv(final_merged_plans, targets_file):
+    final_merged_plans = match_final_plans(clean_plans)
+    final_merged_plans.to_csv(targets_file, index=False)
 
 if __name__ == "__main__":
     targets = "slcsp.csv"
     zips = "zips.csv"
     plans = "plans.csv"
-    write_to_csv(targets, zips, plans)
+    write_to_csv(match_final_plans, targets)
